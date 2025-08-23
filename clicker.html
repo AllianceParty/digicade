@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dot Clicker</title>
+    <link rel="icon" href="logo.png" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Start Screen */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.8s ease-in-out;
+        }
+
+        .start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .arcade-title {
+            font-size: 4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            margin-bottom: 2rem;
+            text-shadow: 
+                0 0 10px #00ff88,
+                0 0 20px #00ff88,
+                0 0 30px #00ff88;
+            animation: neonPulse 2s infinite;
+        }
+
+        .insert-coin {
+            font-size: 2rem;
+            margin-bottom: 3rem;
+            color: #ff6b6b;
+            text-shadow: 0 0 10px #ff6b6b;
+            animation: blink 1.5s infinite;
+        }
+
+        .controls-info {
+            font-size: 1.2rem;
+            color: #888;
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        /* Game UI */
+        .game-ui {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .high-score {
+            font-size: 1.2rem;
+            color: #ffd700;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border: 4px solid #ff6b6b;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 1000;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .game-over.visible {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .game-over h2 {
+            font-size: 3rem;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ff6b6b;
+        }
+
+        .final-score {
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #00ff88, #00cc66);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #000;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #00ff88;
+        }
+
+        /* Canvas */
+        #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            background: #00ff88;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFade 1s forwards;
+        }
+
+        /* Animations */
+        @keyframes neonPulse {
+            0%, 100% { text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88; }
+            50% { text-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88, 0 0 60px #00ff88; }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @keyframes particleFade {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0);
+            }
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes scorePop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .arcade-title {
+                font-size: 2.5rem;
+                letter-spacing: 4px;
+            }
+            
+            .insert-coin {
+                font-size: 1.5rem;
+            }
+            
+            .game-ui {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Start Screen -->
+        <div class="start-screen" id="startScreen">
+            <div class="arcade-title">Dot Clicker</div>
+            <div class="insert-coin">ENTER 1P TO PLAY</div>
+            <div class="controls-info">Press CONTROL + Z to start game</div>
+        </div>
+
+        <!-- Game UI -->
+        <div class="game-ui">
+            <div class="score-display">Score: <span id="currentScore">0</span></div>
+            <div class="high-score">High Score: <span id="highScore">0</span></div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOver">
+            <h2>GAME OVER</h2>
+            <div class="final-score">Score: <span id="finalScore">0</span></div>
+            <button class="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+
+        <!-- Canvas -->
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // Game variables
+        let score = 0;
+        let highScore = 0;
+        let gameActive = false;
+        let currentDot = null;
+        let dotTimer = null;
+        let difficultyTimer = null;
+        let spawnInterval = 2000; // Start with 2 seconds between dots
+        let dotSize = 60; // Start with larger dots
+        let dotLifetime = 3000; // Start with 3 seconds to click
+
+        // DOM elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOver');
+        const currentScoreEl = document.getElementById('currentScore');
+        const highScoreEl = document.getElementById('highScore');
+        const finalScoreEl = document.getElementById('finalScore');
+
+        // Initialize canvas
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // Load high score from localStorage
+        function loadHighScore() {
+            const savedHighScore = localStorage.getItem('dotClickerHighScore');
+            if (savedHighScore) {
+                highScore = parseInt(savedHighScore);
+                highScoreEl.textContent = highScore;
+            }
+        }
+
+        // Save high score to localStorage
+        function saveHighScore() {
+            localStorage.setItem('dotClickerHighScore', highScore.toString());
+        }
+
+        // Create a new dot
+        function createDot() {
+            if (!gameActive) return;
+
+            // Clear previous dot if exists
+            if (currentDot) {
+                clearTimeout(currentDot.timeout);
+            }
+
+            const size = dotSize;
+            const margin = size * 2;
+            
+            // Random position within safe margins
+            const x = margin + Math.random() * (canvas.width - margin * 2);
+            const y = margin + Math.random() * (canvas.height - margin * 2);
+
+            currentDot = {
+                x: x,
+                y: y,
+                size: size,
+                color: '#00ff88',
+                createdAt: Date.now(),
+                timeout: setTimeout(() => {
+                    if (gameActive && currentDot) {
+                        endGame();
+                    }
+                }, dotLifetime)
+            };
+
+            // Draw the dot
+            drawDot();
+        }
+
+        // Draw the current dot
+        function drawDot() {
+            if (!currentDot) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw pulsing effect
+            const pulse = Math.sin(Date.now() / 200) * 5 + 5;
+            
+            ctx.beginPath();
+            ctx.arc(currentDot.x, currentDot.y, currentDot.size + pulse, 0, Math.PI * 2);
+            
+            // Gradient fill
+            const gradient = ctx.createRadialGradient(
+                currentDot.x, currentDot.y, 0,
+                currentDot.x, currentDot.y, currentDot.size + pulse
+            );
+            gradient.addColorStop(0, '#00ff88');
+            gradient.addColorStop(0.7, '#00cc66');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Glow effect
+            ctx.shadowColor = '#00ff88';
+            ctx.shadowBlur = 20;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        // Check if click is on dot
+        function isClickOnDot(x, y) {
+            if (!currentDot) return false;
+            
+            const distance = Math.sqrt(
+                Math.pow(x - currentDot.x, 2) + 
+                Math.pow(y - currentDot.y, 2)
+            );
+            
+            return distance <= currentDot.size;
+        }
+
+        // Create particle effect
+        function createParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.width = Math.random() * 8 + 4 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.background = color;
+                
+                // Random direction and distance
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 100 + 50;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+                
+                document.body.appendChild(particle);
+                
+                // Remove particle after animation
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 1000);
+            }
+        }
+
+        // Increase difficulty over time
+        function increaseDifficulty() {
+            if (!gameActive) return;
+            
+            // Make dots smaller
+            dotSize = Math.max(20, dotSize - 2);
+            
+            // Spawn faster
+            spawnInterval = Math.max(500, spawnInterval - 100);
+            
+            // Less time to click
+            dotLifetime = Math.max(1000, dotLifetime - 200);
+            
+            // Update spawn timer with new interval
+            clearInterval(dotTimer);
+            dotTimer = setInterval(createDot, spawnInterval);
+        }
+
+        // Update score with animation
+        function updateScore(points) {
+            score += points;
+            currentScoreEl.textContent = score;
+            currentScoreEl.style.animation = 'scorePop 0.3s ease';
+            
+            setTimeout(() => {
+                currentScoreEl.style.animation = '';
+            }, 300);
+            
+            // Update high score if needed
+            if (score > highScore) {
+                highScore = score;
+                highScoreEl.textContent = highScore;
+                highScoreEl.style.color = '#ffd700';
+                setTimeout(() => {
+                    highScoreEl.style.color = '#00ff88';
+                }, 1000);
+            }
+        }
+
+        // End game
+        function endGame() {
+            gameActive = false;
+            clearInterval(dotTimer);
+            clearInterval(difficultyTimer);
+            
+            if (currentDot) {
+                clearTimeout(currentDot.timeout);
+                currentDot = null;
+            }
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Show game over screen
+            finalScoreEl.textContent = score;
+            gameOverScreen.classList.add('visible');
+            
+            // Save high score
+            saveHighScore();
+            
+            // Create explosion effect
+            createParticles(canvas.width / 2, canvas.height / 2, '#ff6b6b', 30);
+        }
+
+        // Restart game
+        function restartGame() {
+            gameOverScreen.classList.remove('visible');
+            score = 0;
+            currentScoreEl.textContent = '0';
+            
+            // Reset difficulty
+            spawnInterval = 2000;
+            dotSize = 60;
+            dotLifetime = 3000;
+            
+            startGame();
+        }
+
+        // Start game
+        function startGame() {
+            gameActive = true;
+            
+            // Start spawning dots
+            dotTimer = setInterval(createDot, spawnInterval);
+            
+            // Start increasing difficulty
+            difficultyTimer = setInterval(increaseDifficulty, 5000);
+            
+            createDot();
+        }
+
+        // Event listeners
+        canvas.addEventListener('click', (e) => {
+            if (!gameActive) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (isClickOnDot(x, y)) {
+                // Successful click
+                createParticles(x, y, '#00ff88');
+                updateScore(1);
+                createDot(); // Create new dot immediately
+            } else {
+                // Missed click - game over
+                createParticles(x, y, '#ff6b6b');
+                endGame();
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            // Control + Z to start game
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                if (!gameActive && startScreen.classList.contains('hidden')) {
+                    restartGame();
+                } else if (!gameActive) {
+                    startScreen.classList.add('hidden');
+                    startGame();
+                }
+            }
+            
+            // Escape to show start screen
+            if (e.key === 'Escape' && gameActive) {
+                endGame();
+                startScreen.classList.remove('hidden');
+            }
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            initCanvas();
+            if (gameActive) {
+                drawDot();
+            }
+        });
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initCanvas();
+            loadHighScore();
+            
+            // Add some initial particles for effect
+            createParticles(canvas.width / 2, canvas.height / 2, '#00ff88', 10);
+        });
+    </script>
+</body>
+</html>

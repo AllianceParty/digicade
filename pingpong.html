@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Pong </title>
+    <link rel="icon" href="logo.png" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #00ff41;
+            overflow: hidden;
+        }
+
+        .game-container {
+            background: rgba(0, 0, 0, 0.9);
+            border: 4px solid #00ff41;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 65, 0.4),
+                0 0 60px rgba(0, 255, 65, 0.2);
+            text-align: center;
+            max-width: 800px;
+            width: 95%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff41, transparent);
+            animation: scanline 2s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #00ff41;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 65, 0.7),
+                0 0 20px rgba(0, 255, 65, 0.4);
+            letter-spacing: 3px;
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 10px rgba(0, 255, 65, 0.7), 0 0 20px rgba(0, 255, 65, 0.4); }
+            to { text-shadow: 0 0 20px rgba(0, 255, 65, 0.9), 0 0 40px rgba(0, 255, 65, 0.6); }
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            background: rgba(0, 255, 65, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            position: relative;
+        }
+
+        .player-score, .computer-score, .high-score {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .high-score {
+            border-left: 1px solid rgba(0, 255, 65, 0.2);
+            border-right: 1px solid rgba(0, 255, 65, 0.2);
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #00ff41;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ff41;
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+
+        .game-canvas-container {
+            position: relative;
+            margin: 0 auto;
+            border: 3px solid #00ff41;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #000;
+        }
+
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #003b1f, #00ff41);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            color: #000;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 65, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-start {
+            background: linear-gradient(45deg, #00ff41, #88ffaa);
+        }
+
+        .btn-reset {
+            background: linear-gradient(45deg, #0066ff, #88aaff);
+        }
+
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 255, 65, 0.05);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid rgba(0, 255, 65, 0.1);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            border: 3px solid #00ff41;
+            text-align: center;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.3);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        .start-title {
+            font-size: 3rem;
+            color: #00ff41;
+            text-shadow: 
+                0 0 20px rgba(0, 255, 65, 0.8),
+                0 0 40px rgba(0, 255, 65, 0.5);
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+
+        .start-instruction {
+            font-size: 1.2rem;
+            color: #00ff41;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+            margin-bottom: 20px;
+            animation: blink 2s infinite;
+        }
+
+        .countdown {
+            font-size: 3rem;
+            color: #00ff41;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+            display: none;
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .difficulty {
+            margin: 15px 0;
+        }
+
+        .difficulty label {
+            margin-right: 10px;
+            color: #00ff41;
+        }
+
+        .difficulty select {
+            background: #1a1a1a;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+        }
+
+        .fps-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff41;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 600px) {
+            .game-title {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 250px;
+            }
+            
+            .score-board {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .high-score {
+                border: none;
+                border-top: 1px solid rgba(0, 255, 65, 0.2);
+                border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+                padding: 10px 0;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .particle {
+            position: absolute;
+            background: #00ff41;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: particleFloat 1s ease-out forwards;
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translate(0, 0) scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">PING PONG ARCADE</h1>
+        
+        <div class="score-board">
+            <div class="player-score">
+                <span class="score-label">PLAYER</span>
+                <span id="playerScore" class="score-value">0</span>
+            </div>
+            <div class="high-score">
+                <span class="score-label">HIGH SCORE</span>
+                <span id="highScore" class="score-value">0</span>
+            </div>
+            <div class="computer-score">
+                <span class="score-label">COMPUTER</span>
+                <span id="computerScore" class="score-value">0</span>
+            </div>
+        </div>
+
+        <div class="difficulty">
+            <label for="difficulty">DIFFICULTY:</label>
+            <select id="difficulty">
+                <option value="easy">EASY</option>
+                <option value="medium" selected>MEDIUM</option>
+                <option value="hard">HARD</option>
+                <option value="impossible">IMPOSSIBLE</option>
+            </select>
+        </div>
+
+        <div class="game-canvas-container">
+            <canvas id="gameCanvas" width="600" height="400"></canvas>
+            <div class="fps-counter" id="fpsCounter">120 FPS</div>
+            
+            <div id="countdown" class="countdown">2</div>
+            
+            <div id="gameOver" class="game-over">
+                <h2>GAME OVER</h2>
+                <p id="winnerText"></p>
+                <button class="btn btn-reset" onclick="resetGame()">PLAY AGAIN</button>
+            </div>
+
+            <div id="startScreen" class="start-screen">
+                <h2 class="start-title">PING PONG ARCADE</h2>
+                <p class="start-instruction">ENTER 1P TO PLAY</p>
+                <p class="start-instruction">PRESS CTRL + Z TO START</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn btn-start" onclick="startGame()">START GAME</button>
+            <button class="btn btn-reset" onclick="resetGame()">RESET</button>
+        </div>
+
+        <div class="instructions">
+            <p><strong>CONTROLS:</strong> USE MOUSE OR TOUCH TO MOVE YOUR PADDLE. FIRST TO 11 POINTS WINS!</p>
+            <p><strong>DIFFICULTY:</strong> EASY, MEDIUM, HARD, OR IMPOSSIBLE - CHOOSE YOUR CHALLENGE!</p>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playerScoreElement = document.getElementById('playerScore');
+        const computerScoreElement = document.getElementById('computerScore');
+        const highScoreElement = document.getElementById('highScore');
+        const gameOverElement = document.getElementById('gameOver');
+        const startScreenElement = document.getElementById('startScreen');
+        const countdownElement = document.getElementById('countdown');
+        const winnerTextElement = document.getElementById('winnerText');
+        const startBtn = document.getElementById('startBtn');
+        const difficultySelect = document.getElementById('difficulty');
+        const fpsCounter = document.getElementById('fpsCounter');
+
+        // Game constants
+        const PADDLE_WIDTH = 10;
+        const PADDLE_HEIGHT = 80;
+        const BALL_SIZE = 10;
+        const WINNING_SCORE = 11;
+        const TARGET_FPS = 120;
+        const FRAME_TIME = 1000 / TARGET_FPS;
+        const RESET_DELAY = 2000; // 2 seconds delay after scoring
+
+        // Game state
+        let gameRunning = false;
+        let gameStarted = false;
+        let playerScore = 0;
+        let computerScore = 0;
+        let highScore = 0;
+        let lastTime = 0;
+        let fps = 0;
+        let frameCount = 0;
+        let lastFpsUpdate = 0;
+        let resetTimer = 0;
+        let isResetting = false;
+        let lastScorer = null; // 'player' or 'computer'
+        
+        // Paddle positions
+        let playerPaddleY = canvas.height / 2 - PADDLE_HEIGHT / 2;
+        let computerPaddleY = canvas.height / 2 - PADDLE_HEIGHT / 2;
+        
+        // Ball properties
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        let ballSpeedX = 4;
+        let ballSpeedY = 4;
+
+        // Load high score from localStorage
+        function loadHighScore() {
+            const savedHighScore = localStorage.getItem('pingPongHighScore');
+            if (savedHighScore) {
+                highScore = parseInt(savedHighScore);
+                highScoreElement.textContent = highScore;
+            }
+        }
+
+        // Save high score to localStorage
+        function saveHighScore() {
+            localStorage.setItem('pingPongHighScore', highScore.toString());
+        }
+
+        // Difficulty settings
+        const difficultySettings = {
+            easy: { computerSpeed: 3, ballSpeedMultiplier: 0.7, reactionTime: 0.3 },
+            medium: { computerSpeed: 4, ballSpeedMultiplier: 0.9, reactionTime: 0.5 },
+            hard: { computerSpeed: 5, ballSpeedMultiplier: 1.1, reactionTime: 0.7 },
+            impossible: { computerSpeed: 6, ballSpeedMultiplier: 1.3, reactionTime: 0.9 }
+        };
+
+        // Event listeners
+        canvas.addEventListener('mousemove', function(evt) {
+            if (gameRunning && !isResetting) {
+                const mousePos = calculateMousePos(evt);
+                playerPaddleY = mousePos.y - PADDLE_HEIGHT / 2;
+                
+                // Keep paddle on screen
+                playerPaddleY = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, playerPaddleY));
+            }
+        });
+
+        canvas.addEventListener('touchmove', function(evt) {
+            evt.preventDefault();
+            if (gameRunning && !isResetting) {
+                const touch = evt.touches[0];
+                const touchPos = calculateMousePos(touch);
+                playerPaddleY = touchPos.y - PADDLE_HEIGHT / 2;
+                
+                // Keep paddle on screen
+                playerPaddleY = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, playerPaddleY));
+            }
+        });
+
+        // Keyboard controls - Changed from Ctrl+P to Ctrl+Z
+        document.addEventListener('keydown', function(evt) {
+            // Start game with Ctrl+Z
+            if (evt.ctrlKey && evt.key.toLowerCase() === 'z') {
+                evt.preventDefault();
+                if (!gameStarted) {
+                    startScreenElement.style.display = 'none';
+                    gameStarted = true;
+                    startCountdown();
+                }
+            }
+        });
+
+        function calculateMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            const root = document.documentElement;
+            return {
+                x: evt.clientX - rect.left - root.scrollLeft,
+                y: evt.clientY - rect.top - root.scrollTop
+            };
+        }
+
+        function startCountdown() {
+            let count = 2;
+            countdownElement.style.display = 'block';
+            countdownElement.textContent = count;
+            
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownElement.textContent = count;
+                } else {
+                    countdownElement.style.display = 'none';
+                    clearInterval(countdownInterval);
+                    startGame();
+                }
+            }, 1000);
+        }
+
+        function startGame() {
+            if (!gameRunning && gameStarted && !isResetting) {
+                gameRunning = true;
+                startBtn.textContent = 'PAUSE';
+                lastTime = performance.now();
+                gameLoop();
+            } else if (gameRunning) {
+                gameRunning = false;
+                startBtn.textContent = 'RESUME';
+            }
+        }
+
+        function resetGame() {
+            playerScore = 0;
+            computerScore = 0;
+            playerScoreElement.textContent = '0';
+            computerScoreElement.textContent = '0';
+            
+            resetBall();
+            gameOverElement.style.display = 'none';
+            gameRunning = false;
+            startBtn.textContent = 'START GAME';
+            isResetting = false;
+            lastScorer = null;
+            
+            // Show start screen again
+            startScreenElement.style.display = 'flex';
+            gameStarted = false;
+        }
+
+        function serveBall(toPlayer) {
+            // Serve ball to the specified side
+            if (toPlayer) {
+                // Serve to player (ball comes from computer side)
+                ballX = canvas.width - PADDLE_WIDTH - 20;
+                ballSpeedX = -4; // Move left toward player
+            } else {
+                // Serve to computer (ball comes from player side)
+                ballX = PADDLE_WIDTH + 20;
+                ballSpeedX = 4; // Move right toward computer
+            }
+            
+            ballY = canvas.height / 2;
+            ballSpeedY = (Math.random() * 2 - 1) * 4;
+            
+            // Apply difficulty multiplier
+            const difficulty = difficultySelect.value;
+            const multiplier = difficultySettings[difficulty].ballSpeedMultiplier;
+            ballSpeedX *= multiplier;
+            ballSpeedY *= multiplier;
+        }
+
+        function startResetTimer() {
+            isResetting = true;
+            resetTimer = RESET_DELAY;
+            
+            // Position ball for the opponent's serve
+            let serveToOpponent = lastScorer === 'computer'; // If computer scored, serve to player
+            if (lastScorer === 'player') {
+                // If player scored, serve to computer
+                serveBall(false);
+            } else {
+                // If computer scored, serve to player
+                serveBall(true);
+            }
+            
+            // Stop ball movement during reset
+            ballSpeedX = 0;
+            ballSpeedY = 0;
+        }
+
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.background = color;
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.width = Math.random() * 5 + 2 + 'px';
+                particle.style.height = particle.style.width;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 30 + 10;
+                particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                
+                document.querySelector('.game-canvas-container').appendChild(particle);
+                
+                // Remove particle after animation completes
+                setTimeout(() => {
+                    particle.remove();
+                }, 1000);
+            }
+        }
+
+        function computerMovement() {
+            if (isResetting) return;
+            
+            const difficulty = difficultySelect.value;
+            const { computerSpeed, reactionTime } = difficultySettings[difficulty];
+            
+            // Add some imperfection based on difficulty
+            const errorMargin = difficulty === 'impossible' ? 0 : 
+                               difficulty === 'hard' ? 10 :
+                               difficulty === 'medium' ? 20 : 30;
+            
+            const computerPaddleCenter = computerPaddleY + PADDLE_HEIGHT / 2;
+            const ballCenter = ballY + BALL_SIZE / 2;
+            
+            // Add reaction time delay
+            const shouldReact = Math.random() < reactionTime;
+            
+            if (shouldReact && !isResetting) {
+                const error = (Math.random() * errorMargin) - (errorMargin / 2);
+                
+                if (computerPaddleCenter < ballCenter + error) {
+                    computerPaddleY += computerSpeed;
+                } else if (computerPaddleCenter > ballCenter + error) {
+                    computerPaddleY -= computerSpeed;
+                }
+            }
+            
+            // Keep computer paddle on screen
+            computerPaddleY = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, computerPaddleY));
+        }
+
+        function moveEverything(deltaTime) {
+            if (!gameRunning || isResetting) return;
+            
+            computerMovement();
+            
+            // Move the ball with time-based movement
+            ballX += ballSpeedX * (deltaTime / FRAME_TIME);
+            ballY += ballSpeedY * (deltaTime / FRAME_TIME);
+            
+            // Ball collision with top and bottom walls
+            if (ballY < 0) {
+                ballY = 0;
+                ballSpeedY = -ballSpeedY;
+                createParticles(ballX, ballY, 8, '#00ff41');
+            } else if (ballY + BALL_SIZE > canvas.height) {
+                ballY = canvas.height - BALL_SIZE;
+                ballSpeedY = -ballSpeedY;
+                createParticles(ballX, ballY, 8, '#00ff41');
+            }
+            
+            // Ball collision with paddles
+            // Player paddle (left)
+            if (ballX < PADDLE_WIDTH && 
+                ballY + BALL_SIZE > playerPaddleY && 
+                ballY < playerPaddleY + PADDLE_HEIGHT) {
+                
+                ballX = PADDLE_WIDTH;
+                ballSpeedX = -ballSpeedX;
+                
+                // Add spin based on where the ball hits the paddle
+                const deltaY = ballY - (playerPaddleY + PADDLE_HEIGHT / 2);
+                ballSpeedY = deltaY * 0.15;
+                
+                // Create particles and visual effects
+                createParticles(ballX, ballY, 12, '#00ff41');
+                playPaddleHitSound();
+            }
+            
+            // Computer paddle (right)
+            if (ballX + BALL_SIZE > canvas.width - PADDLE_WIDTH && 
+                ballY + BALL_SIZE > computerPaddleY && 
+                ballY < computerPaddleY + PADDLE_HEIGHT) {
+                
+                ballX = canvas.width - PADDLE_WIDTH - BALL_SIZE;
+                ballSpeedX = -ballSpeedX;
+                
+                // Add spin based on where the ball hits the paddle
+                const deltaY = ballY - (computerPaddleY + PADDLE_HEIGHT / 2);
+                ballSpeedY = deltaY * 0.15;
+                
+                // Create particles and visual effects
+                createParticles(ballX, ballY, 12, '#00ff41');
+                playPaddleHitSound();
+            }
+            
+            // Score points
+            if (ballX < 0) {
+                computerScore++;
+                computerScoreElement.textContent = computerScore;
+                lastScorer = 'computer';
+                createParticles(0, ballY, 20, '#ff4444');
+                startResetTimer();
+                checkGameOver();
+            } else if (ballX + BALL_SIZE > canvas.width) {
+                playerScore++;
+                playerScoreElement.textContent = playerScore;
+                lastScorer = 'player';
+                createParticles(canvas.width, ballY, 20, '#00ff41');
+                
+                // Update high score
+                if (playerScore > highScore) {
+                    highScore = playerScore;
+                    highScoreElement.textContent = highScore;
+                    saveHighScore();
+                }
+                
+                startResetTimer();
+                checkGameOver();
+            }
+        }
+
+        function checkGameOver() {
+            if (playerScore >= WINNING_SCORE || computerScore >= WINNING_SCORE) {
+                gameRunning = false;
+                startBtn.textContent = 'START GAME';
+                
+                gameOverElement.style.display = 'block';
+                if (playerScore >= WINNING_SCORE) {
+                    winnerTextElement.textContent = 'YOU WIN! CHAMPION!';
+                    winnerTextElement.style.color = '#00ff41';
+                    createParticles(canvas.width / 2, canvas.height / 2, 50, '#00ff41');
+                } else {
+                    winnerTextElement.textContent = 'COMPUTER WINS! TRY AGAIN!';
+                    winnerTextElement.style.color = '#ff4444';
+                    createParticles(canvas.width / 2, canvas.height / 2, 50, '#ff4444');
+                }
+            }
+        }
+
+        function playPaddleHitSound() {
+            // Simulate sound effect with visual feedback
+            canvas.style.boxShadow = '0 0 20px #00ff41';
+            setTimeout(() => {
+                canvas.style.boxShadow = 'none';
+            }, 100);
+        }
+
+        function drawEverything() {
+            // Clear the canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid background
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = 20; x < canvas.width; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = 20; y < canvas.height; y += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw center line
+            ctx.setLineDash([5, 15]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.strokeStyle = '#00ff41';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw paddles with gradient
+            const paddleGradient = ctx.createLinearGradient(0, 0, PADDLE_WIDTH, 0);
+            paddleGradient.addColorStop(0, '#00cc33');
+            paddleGradient.addColorStop(1, '#00ff41');
+            
+            ctx.fillStyle = paddleGradient;
+            ctx.fillRect(0, playerPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+            ctx.fillRect(canvas.width - PADDLE_WIDTH, computerPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+            
+            // Draw ball with glow (even during reset)
+            const ballGradient = ctx.createRadialGradient(
+                ballX + BALL_SIZE / 2, ballY + BALL_SIZE / 2, 0,
+                ballX + BALL_SIZE / 2, ballY + BALL_SIZE / 2, BALL_SIZE / 2
+            );
+            ballGradient.addColorStop(0, '#ffffff');
+            ballGradient.addColorStop(1, '#00ff41');
+            
+            ctx.fillStyle = ballGradient;
+            ctx.beginPath();
+            ctx.arc(ballX + BALL_SIZE / 2, ballY + BALL_SIZE / 2, BALL_SIZE / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add glow effects
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ff41';
+            ctx.fillRect(0, playerPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+            ctx.fillRect(canvas.width - PADDLE_WIDTH, computerPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+            
+            ctx.beginPath();
+            ctx.arc(ballX + BALL_SIZE / 2, ballY + BALL_SIZE / 2, BALL_SIZE / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Draw reset timer if active
+            if (isResetting && resetTimer > 0) {
+                const timerText = "GET READY... " + Math.ceil(resetTimer / 1000);
+                ctx.font = "20px 'Courier New'";
+                ctx.fillStyle = '#00ff41';
+                ctx.textAlign = 'center';
+                ctx.fillText(timerText, canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        function updateFPS(currentTime) {
+            frameCount++;
+            
+            if (currentTime - lastFpsUpdate >= 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastFpsUpdate));
+                fpsCounter.textContent = fps + ' FPS';
+                frameCount = 0;
+                lastFpsUpdate = currentTime;
+            }
+        }
+
+        function updateResetTimer(deltaTime) {
+            if (isResetting) {
+                resetTimer -= deltaTime;
+                if (resetTimer <= 0) {
+                    isResetting = false;
+                    const difficulty = difficultySelect.value;
+                    const multiplier = difficultySettings[difficulty].ballSpeedMultiplier;
+                    
+                    if (lastScorer === 'player') {
+                        // Serve to computer from player side
+                        ballX = PADDLE_WIDTH + 20;
+                        ballSpeedX = 4 * multiplier;
+                    } else {
+                        // Serve to player from computer side
+                        ballX = canvas.width - PADDLE_WIDTH - 20;
+                        ballSpeedX = -4 * multiplier;
+                    }
+                    
+                    ballSpeedY = (Math.random() * 2 - 1) * 4 * multiplier;
+                }
+            }
+        }
+
+        function gameLoop(currentTime) {
+            if (!lastTime) lastTime = currentTime;
+            const deltaTime = currentTime - lastTime;
+            
+            if (deltaTime >= FRAME_TIME) {
+                updateResetTimer(deltaTime);
+                if (!isResetting) {
+                    moveEverything(deltaTime);
+                }
+                drawEverything();
+                updateFPS(currentTime);
+                lastTime = currentTime - (deltaTime % FRAME_TIME);
+            }
+            
+            if (gameRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Initial setup
+        loadHighScore();
+        // Start ball in middle for initial serve to player
+        ballX = canvas.width - PADDLE_WIDTH - 20;
+        ballSpeedX = -4;
+        drawEverything();
+    </script>
+</body>
+</html>
